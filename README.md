@@ -5,12 +5,13 @@ Este script Node.js utiliza o poder do Google Gemini para gerar documentação t
 ### Pré-requisitos:
 
 - **Node.js e NPM:** Certifique-se de ter o Node.js e o NPM (Node Package Manager) instalados em seu sistema.
-- **Chave de API do Google Gemini:** Obtenha sua chave de API no Google Cloud Platform e substitua  `'SUA_API_KEY'` no código pelo valor da sua chave. 
+- **Chave de API do Google Gemini:** Obtenha sua chave de API no Google Cloud Platform e substitua  `'SUA_API_KEY'` no arquivo **.ENV** pelo valor da sua chave. 
 - **Biblioteca `@google/generative-ai`:** Instale a biblioteca usando o NPM:
 
   ```bash
-  npm install @google/generative-ai fs-extra path
+  npm install @google/generative-ai fs-extra path dotenv
   ```
+  
 
 ### Como usar:
 
