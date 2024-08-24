@@ -1,10 +1,16 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env
 
-// Substitua 'SUA_API_KEY' pela sua chave de API real
-const API_KEY = 'AIzaSyDWB20MOJcoFrTjVsfSGgkv6X9JMmnZbFc';
+// Acessa a chave da API a partir das variáveis de ambiente
+const API_KEY = process.env.API_KEY;
 
+// Verifica se a chave da API foi definida
+if (!API_KEY) {
+  console.error("Erro: Chave da API (API_KEY) não encontrada no arquivo .env.");
+  process.exit(1); // Encerra o script com erro se a chave não for encontrada
+}
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Função para ler o arquivo ou pasta especificado e retornar o caminho do arquivo de documentação
