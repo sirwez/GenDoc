@@ -1,68 +1,81 @@
 ## DocGen: Gerador de Documentação com Google Gemini
 
-Este script Node.js utiliza o poder do Google Gemini para gerar documentação técnica detalhada de código-fonte, seja de um único arquivo ou de um projeto inteiro.
+Este guia detalhado explica como usar o script `docgen.js` para gerar documentação técnica com o Google Gemini.
 
-### Pré-requisitos:
+### 1. Obtenção do Código-Fonte
 
-- **Node.js e NPM:** Certifique-se de ter o Node.js e o NPM (Node Package Manager) instalados em seu sistema.
-- **Chave de API do Google Gemini:** Obtenha sua chave de API no Google Cloud Platform e substitua  `'SUA_API_KEY'` no arquivo **.ENV** pelo valor da sua chave. 
-- **Biblioteca `@google/generative-ai`:** Instale a biblioteca usando o NPM:
+Comece clonando o repositório do GenDoc:
 
-  ```bash
-  npm install @google/generative-ai fs-extra path dotenv
-  ```
-  
+```bash
+git clone https://github.com/sirwez/GenDoc.git
+```
 
-### Como usar:
+Navegue até a pasta do projeto:
 
-1. **Salve o código:** Copie o código fornecido e salve-o em um arquivo chamado `docgen.js`.
+```bash
+cd GenDoc
+```
 
-2. **Defina o caminho alvo:** Altere a variável `targetPath` no final do código para o caminho do seu arquivo ou pasta de código-fonte. 
-   - Para gerar documentação para um único arquivo:
-     ```javascript
-     const targetPath = 'C:\\caminho\\para\\seu\\arquivo.js'; 
-     ```
-   - Para gerar documentação para uma pasta (e seus subdiretórios):
-     ```javascript
-     const targetPath = 'C:\\caminho\\para\\sua\\pasta';
-     ```
+### 2. Configuração do Ambiente
 
-3. **Execute o script:** No terminal, navegue até o diretório onde você salvou `docgen.js` e execute o comando:
+#### 2.1 Chave de API do Google Gemini
 
-   ```bash
-   node docgen.js
+1. Acesse o [Google Cloud Platform](https://aistudio.google.com/) e obtenha sua chave de API.
+2. Crie um arquivo chamado `.env` na pasta raiz do projeto `GenDoc`.
+3. Abra o arquivo `.env` e adicione a seguinte linha, substituindo `SuaAPIKeyAqui` pela sua chave de API:
+
+```
+API_KEY=SuaAPIKeyAqui
+```
+
+#### 2.2 Instalação das Dependências
+
+Instale as bibliotecas necessárias utilizando o NPM:
+
+```bash
+npm install @google/generative-ai fs-extra path dotenv
+```
+
+### 3. Configuração do Caminho do Arquivo/Pasta Alvo
+
+Abra o arquivo `docgen.js` com um editor de texto. 
+
+Localize a linha que define a variável `targetPath`:
+
+```javascript
+const targetPath = 'C:\\caminho\\para\\seu\\arquivo.js'; 
+```
+
+Substitua `C:\\caminho\\para\\seu\\arquivo.js` pelo caminho completo do seu arquivo ou pasta de código-fonte. 
+
+**Exemplos:**
+
+- **Único arquivo:**
+   ```javascript
+   const targetPath = 'C:\\MeusProjetos\\projetoX\\index.js'; 
+   ```
+- **Pasta:**
+   ```javascript
+   const targetPath = 'C:\\MeusProjetos\\projetoY\\src';
    ```
 
-4. **Encontre a documentação:** O script irá gerar um arquivo `DOCUMENTATION.md` no mesmo diretório do arquivo ou pasta alvo.
+**Observação:** Utilize barras invertidas (\\) ou barras normais (/) no caminho, dependendo do seu sistema operacional.
 
-### Funcionamento:
+### 4. Execução do Script
 
-O script funciona da seguinte forma:
+No terminal, navegue até a pasta `GenDoc` e execute o script:
 
-1. **Leitura do código-fonte:** 
-   - Ele lê o arquivo ou pasta especificado em `targetPath`. 
-   - Se for uma pasta, ele percorre recursivamente todos os arquivos dentro dela.
-2. **Geração do prompt:** 
-   - O script constrói um prompt para o Gemini, incluindo o código-fonte e instruções para gerar a documentação.
-3. **Chamada à API do Gemini:** 
-   - Ele envia o prompt para a API do Gemini, que utiliza um modelo de linguagem avançado para gerar a documentação.
-4. **Escrita do arquivo Markdown:** 
-   - O script recebe a documentação gerada pelo Gemini e a salva em um arquivo `DOCUMENTATION.md` no formato Markdown.
+```bash
+node docgen.js
+```
 
-### Observações:
+### 5. Visualização da Documentação
 
-- O script foi projetado para funcionar com diferentes linguagens de programação.
-- A qualidade da documentação gerada depende da qualidade do código-fonte e das instruções fornecidas no prompt.
-- O limite de tokens para a API do Gemini pode ser ajustado na configuração `generationConfig`. 
+Após a execução, um arquivo `DOCUMENTATION.md` será gerado no mesmo diretório do arquivo ou pasta alvo. Abra este arquivo com um editor de texto ou visualizador Markdown para ver a documentação gerada.
 
-### Exemplo de `DOCUMENTATION.md`:
+### Observações Adicionais
 
-O arquivo `DOCUMENTATION.md` gerado conterá a documentação em formato Markdown. A estrutura exata da documentação pode variar, mas incluirá informações como:
-
-- Nome do arquivo
-- Caminho completo
-- Linguagem de programação
-- Descrição da funcionalidade
-- Detalhes de funções/classes/métodos, incluindo parâmetros, valores de retorno e exemplos de uso.
-
-
+- Certifique-se de ter permissão de leitura para o arquivo/pasta alvo.
+- A qualidade da documentação depende da qualidade do código-fonte e das instruções fornecidas ao Gemini.
+- O tempo de processamento varia de acordo com o tamanho do código-fonte.
+- Consulte a documentação do Google Gemini para obter informações detalhadas sobre o modelo e suas capacidades. 
