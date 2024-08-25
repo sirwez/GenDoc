@@ -1,159 +1,148 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env
+require('dotenv').config();
 
-// Acessa a chave da API a partir das variáveis de ambiente
 const API_KEY = process.env.API_KEY;
-
-// Verifica se a chave da API foi definida
 if (!API_KEY) {
-  console.error("Erro: Chave da API (API_KEY) não encontrada no arquivo .env.");
-  process.exit(1); // Encerra o script com erro se a chave não for encontrada
+    console.error("Erro: Chave da API (API_KEY) não encontrada no arquivo .env.");
+    process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-// Função para ler o arquivo ou pasta especificado e retornar o caminho do arquivo de documentação
 async function readTarget(targetPath) {
-    const stat = await fs.stat(targetPath);
-    let files = [];
-
-    if (stat.isDirectory()) {
-        files = await readRepo(targetPath);
-    } else if (stat.isFile()) {
-        files.push(targetPath);
-    } else {
-        console.error('Caminho inválido:', targetPath);
-        return null; // Retorna null se o caminho for inválido
+    try {
+        const stat = await fs.stat(targetPath);
+        const files = stat.isDirectory() ? await readRepo(targetPath) : [targetPath];
+        const docPath = stat.isDirectory()
+            ? path.join(targetPath, 'DOCUMENTATION.md')
+            : path.join(path.dirname(targetPath), 'DOCUMENTATION.md');
+        return { files, docPath };
+    } catch (error) {
+        console.error('Erro ao ler o alvo:', error);
+        return null;
     }
-
-    // Define o caminho do arquivo DOCUMENTATION.md 
-    const docPath = stat.isDirectory()
-        ? path.join(targetPath, 'DOCUMENTATION.md')
-        : path.join(path.dirname(targetPath), 'DOCUMENTATION.md');
-
-    return { files, docPath }; // Retorna os arquivos e o caminho da documentação
 }
 
-// Função para ler todos os arquivos do repositório (recursivamente)
 async function readRepo(repoPath) {
-    let files = [];
     const items = await fs.readdir(repoPath);
-
-    for (const item of items) {
+    const files = await Promise.all(items.map(async (item) => {
         const fullPath = path.join(repoPath, item);
         const stat = await fs.stat(fullPath);
-
         if (stat.isDirectory() && !item.startsWith('.')) {
-            files = files.concat(await readRepo(fullPath));
+            return readRepo(fullPath);
         } else if (stat.isFile()) {
-            files.push(fullPath);
+            return fullPath;
         }
-    }
-
-    return files;
+    }));
+    return files.flat().filter(Boolean);
 }
 
-// Função para gerar a documentação usando a API do Gemini
 async function generateDocumentation(content, isSingleFile) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-    // Ajusta o prompt dependendo se é um arquivo único ou um projeto
-    const prompt = isSingleFile ?
-        `
-  Você é um desenvolvedor experiente, analisando o código-fonte de um arquivo. 
-  Gere uma documentação detalhada e bem estruturada para este arquivo, incluindo:
+    const prompt = `
+        You are an experienced senior developer tasked with creating a comprehensive and detailed documentation for ${isSingleFile ? "a single file" : "a multi-file project"} within a software repository. The documentation should be exhaustive, covering every relevant detail that another developer or team might need to understand, maintain, or extend the codebase. The documentation should follow best practices in technical writing, ensuring clarity, precision, and accessibility.
 
-  **Informações Essenciais:**
-  * Nome do arquivo:
-  * Caminho completo: 
-  * Linguagem de programação (se possível identificar):
-  * Descrição geral do propósito e funcionalidade do arquivo.
-  * Quaisquer dependências ou módulos externos utilizados.
+        **Project Overview:**
+        - Provide a high-level summary of the purpose and functionality of the ${isSingleFile ? "file" : "project"}.
+        - Explain the context in which this ${isSingleFile ? "file" : "project"} would typically be used.
+        - Identify the main technologies and frameworks utilized.
+        - Highlight any design patterns or architectural principles followed.
 
-  **Análise Detalhada do Código:**
-  * Para cada função, classe, método ou estrutura relevante no arquivo, forneça:
-      * Nome
-      * Descrição da funcionalidade
-      * Parâmetros de entrada (se houver) e seus tipos
-      * Valor de retorno (se houver) e seu tipo
-      * Exemplos de uso
-  * Explique quaisquer algoritmos complexos ou lógica de negócios.
-  * Documente os casos de uso pretendidos e quaisquer potenciais casos extremos.
-  * Se aplicável, forneça exemplos de como testar o código.
+        **File Information (for each file):**
+        - File Name:
+        - Full Path:
+        - Programming Language(s) (if identifiable):
+        - General Description:
+          - What is the overall purpose of this file?
+          - What specific problems does it solve, and how does it fit into the larger codebase?
+        - Dependencies and External Modules:
+          - List any external libraries or modules used, with a brief description of their purpose.
+          - Include version information if applicable.
 
-  **Código-Fonte:**
-  \`\`\`
-  ${content}
-  \`\`\`
-` :
-        `
-  Você é um desenvolvedor experiente, analisando o código-fonte de um projeto com múltiplos arquivos. 
-  Gere uma documentação detalhada e bem estruturada para cada arquivo, incluindo:
+        **Code Structure and Flow:**
+        - Provide a detailed outline of the code structure.
+        - Break down the file into its main components (functions, classes, modules).
+        - For each component, include:
+          - Name and location in the code.
+          - Detailed description of its purpose and functionality.
+          - Input Parameters:
+            - Name, Type, and Description for each parameter.
+          - Return Values:
+            - Type and Description of the return value.
+          - Example Usage:
+            - Provide code snippets demonstrating typical use cases.
+          - Edge Cases:
+            - Document any potential edge cases or unusual scenarios that the code is designed to handle.
+          - Performance Considerations:
+            - Discuss any known performance characteristics, including potential bottlenecks.
+          - Error Handling:
+            - Describe how errors are managed within the code.
+            - Include examples of error messages and handling strategies.
 
-  **Para cada arquivo:**
-  * Nome do arquivo:
-  * Caminho completo: 
-  * Linguagem de programação (se possível identificar):
-  * Descrição geral do propósito e funcionalidade do arquivo.
-  * Quaisquer dependências ou módulos externos utilizados.
+        **In-depth Analysis:**
+        - Complex Algorithms and Business Logic:
+          - Provide a step-by-step explanation of any complex algorithms, including pseudo-code if necessary.
+          - Discuss the rationale behind the algorithm choices.
+          - Include diagrams or flowcharts if applicable.
+        - Security Considerations:
+          - Highlight any security measures implemented within the code.
+          - Discuss potential vulnerabilities and how they are mitigated.
+        - Testing Strategies:
+          - Provide detailed information on how the code can be tested.
+          - Include examples of unit tests, integration tests, and end-to-end tests where applicable.
+          - Discuss any known limitations of the current test coverage.
 
-  **Análise Detalhada do Código (Para cada arquivo):**
-  * Para cada função, classe, método ou estrutura relevante, forneça:
-      * Nome
-      * Descrição da funcionalidade
-      * Parâmetros de entrada (se houver) e seus tipos
-      * Valor de retorno (se houver) e seu tipo
-      * Exemplos de uso
-  * Explique quaisquer algoritmos complexos ou lógica de negócios.
-  * Documente os casos de uso pretendidos e quaisquer potenciais casos extremos.
-  * Se aplicável, forneça exemplos de como testar o código.
+        **Code Quality and Best Practices:**
+        - Identify any coding standards or best practices followed.
+        - Discuss any areas of the code that could be refactored or improved, with suggestions.
+        - Comment on code readability, maintainability, and scalability.
 
-  **Código-Fonte:**
-  \`\`\`
-  ${content}
-  \`\`\`
-`;
+        **Future Development and Maintenance:**
+        - Suggest areas for future development or enhancement.
+        - Provide guidance on how to extend or modify the existing codebase.
+        - Document any known issues or technical debt, with recommendations for addressing them.
+
+        **Source Code:**
+        \`\`\`
+        ${content}
+        \`\`\`
+    `;
 
     try {
         const chat = model.startChat({
             history: [],
             generationConfig: {
-                maxOutputTokens: 1874901544,
+                maxOutputTokens: 4096,
                 temperature: 0.7
             },
         });
 
         const result = await chat.sendMessage(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        return text;
-
+        return result.response.text();
     } catch (error) {
         console.error('Erro ao gerar a documentação:', error);
         return null;
     }
 }
 
-// Função principal para processar o arquivo/pasta e gerar a documentação
 async function processTarget(targetPath) {
     try {
-        const { files, docPath } = await readTarget(targetPath); // Obtém arquivos e docPath
+        const { files, docPath } = await readTarget(targetPath);
 
         if (!files || !docPath) {
             console.error('Erro ao ler o alvo ou definir o caminho da documentação.');
-            return; // Sai da função se houver erro
+            return;
         }
 
-        let content = '';
-        for (const file of files) {
+        const content = await Promise.all(files.map(async (file) => {
             const fileContent = await fs.readFile(file, 'utf8');
-            content += `\n\n### Arquivo: ${file}\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n`;
-        }
+            return `\n\n### Arquivo: ${file}\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n`;
+        }));
 
         const isSingleFile = files.length === 1;
-        const documentation = await generateDocumentation(content, isSingleFile);
+        const documentation = await generateDocumentation(content.join(''), isSingleFile);
 
         if (documentation) {
             await fs.writeFile(docPath, documentation);
@@ -163,9 +152,8 @@ async function processTarget(targetPath) {
         console.error('Erro ao processar o alvo:', error);
     }
 }
-
 // Caminho do arquivo ou pasta alvo (ajuste conforme necessário)
 // const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug'; // Exemplo: processa uma pasta
-const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug\\DevController.php'; // Exemplo: processa um arquivo
-
+// const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug\\DevController.php'; // Exemplo: processa um arquivo
+const targetPath = 'C:\\Users\\SirWez\\crypt\\app';
 processTarget(targetPath);
