@@ -10,6 +10,9 @@ if (!API_KEY) {
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
 
+const BATCH_SIZE = 5; // Número de arquivos por lote
+const WAIT_TIME = 10000; // Tempo de espera entre os lotes em milissegundos
+
 async function readTarget(targetPath) {
     try {
         const stat = await fs.stat(targetPath);
@@ -127,6 +130,31 @@ async function generateDocumentation(content, isSingleFile) {
     }
 }
 
+async function processFilesInBatches(files, isSingleFile) {
+    let allDocumentation = '';
+
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+
+        const content = await Promise.all(batch.map(async (file) => {
+            const fileContent = await fs.readFile(file, 'utf8');
+            return `\n\n### Arquivo: ${file}\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n`;
+        }));
+
+        const documentation = await generateDocumentation(content.join(''), isSingleFile);
+        if (documentation) {
+            allDocumentation += documentation;
+        }
+
+        if (i + BATCH_SIZE < files.length) {
+            console.log(`Aguardando ${WAIT_TIME / 1000} segundos antes de processar o próximo lote...`);
+            await new Promise(resolve => setTimeout(resolve, WAIT_TIME));
+        }
+    }
+
+    return allDocumentation;
+}
+
 async function processTarget(targetPath) {
     try {
         const { files, docPath } = await readTarget(targetPath);
@@ -136,13 +164,8 @@ async function processTarget(targetPath) {
             return;
         }
 
-        const content = await Promise.all(files.map(async (file) => {
-            const fileContent = await fs.readFile(file, 'utf8');
-            return `\n\n### Arquivo: ${file}\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n`;
-        }));
-
         const isSingleFile = files.length === 1;
-        const documentation = await generateDocumentation(content.join(''), isSingleFile);
+        const documentation = await processFilesInBatches(files, isSingleFile);
 
         if (documentation) {
             await fs.writeFile(docPath, documentation);
@@ -152,6 +175,7 @@ async function processTarget(targetPath) {
         console.error('Erro ao processar o alvo:', error);
     }
 }
+
 // Caminho do arquivo ou pasta alvo (ajuste conforme necessário)
 // const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug'; // Exemplo: processa uma pasta
 // const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug\\DevController.php'; // Exemplo: processa um arquivo
