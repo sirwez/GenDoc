@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { Command } = require('commander');
 require('dotenv').config();
 
 const API_KEY = process.env.API_KEY;
@@ -10,8 +11,8 @@ if (!API_KEY) {
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const BATCH_SIZE = 5; // Número de arquivos por lote
-const WAIT_TIME = 10000; // Tempo de espera entre os lotes em milissegundos
+let BATCH_SIZE = 5; // Número de arquivos por lote (valor padrão)
+let WAIT_TIME = 10000; // Tempo de espera entre os lotes em milissegundos (valor padrão)
 
 async function readTarget(targetPath) {
     try {
@@ -176,8 +177,28 @@ async function processTarget(targetPath) {
     }
 }
 
-// Caminho do arquivo ou pasta alvo (ajuste conforme necessário)
-// const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug'; // Exemplo: processa uma pasta
-// const targetPath = 'C:\\Users\\Lenovo\\agendart-3.0\\app\\Http\\Controllers\\Debug\\DevController.php'; // Exemplo: processa um arquivo
-const targetPath = 'C:\\Users\\SirWez\\crypt\\app';
-processTarget(targetPath);
+// Configuração da CLI com Commander
+const program = new Command();
+
+program
+    .version('1.0.0')
+    .description('CLI para geração de documentação de arquivos ou projetos usando a API do Google Generative AI');
+
+program
+    .option('-p, --path <targetPath>', 'Caminho do arquivo ou pasta alvo')
+    .option('-b, --batch-size <number>', 'Número de arquivos por lote', '5')
+    .option('-w, --wait-time <milliseconds>', 'Tempo de espera entre os lotes em milissegundos', '10000')
+    .action((options) => {
+        const targetPath = options.path;
+        if (!targetPath) {
+            console.error('Erro: O caminho do arquivo ou pasta alvo deve ser especificado usando a opção -p ou --path.');
+            process.exit(1);
+        }
+
+        BATCH_SIZE = parseInt(options.batchSize, 10);
+        WAIT_TIME = parseInt(options.waitTime, 10);
+
+        processTarget(targetPath);
+    });
+
+program.parse(process.argv);
